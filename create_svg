@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# Arg 1 is size of graph
+# Arg 2 is probability of arc swap
+# Arg 3 is output filename
+./strogatz $1 $2 | dot -o $3 -T svg
