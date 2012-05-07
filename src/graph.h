@@ -5,12 +5,12 @@
 #include <stdbool.h>
 
 struct graph_t {
-  bool **mat;
+  bool *mat;
   int size;
 };
 
-struct graph_t* build_unconnected_graph(int size);
-struct graph_t* build_ring_graph(int size);
+struct graph_t* build_unconnected_graph(int num_vertices);
+struct graph_t* build_regular_graph(int num_vertices, int edges_per_vertex);
 void randomise_graph(struct graph_t*, float);
 int get_degree(struct graph_t*, int);
 void print_graph(struct graph_t*);
