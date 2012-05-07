@@ -38,7 +38,7 @@ static bool get_edge(struct graph_t *g, int i, int j)
 struct graph_t* build_unconnected_graph(int num_vertices)
 {
   struct graph_t *g = (struct graph_t*) malloc(sizeof(struct graph_t));
-  g->mat = (bool*) calloc(num_vertices*((num_vertices>>1)+(num_vertices%2)+1), sizeof(bool));
+  g->mat = (bool*) calloc(num_vertices * num_vertices, sizeof(bool));
   g->size = num_vertices;
   return g;
 }
