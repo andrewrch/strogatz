@@ -25,6 +25,11 @@ int main(int argc, char** argv)
   if (sscanf(argv[3], "%f", &prob_of_swap) != 1)
     goto err_usage;
 
+  if (edges_per_vertex % 2) {
+    fprintf(stderr, "edges_per_vertex should be even\n");
+    return EXIT_FAILURE;
+  }
+
   fprintf(stderr,
       "Configuration:\n"
       "  Vertices:         %d\n"

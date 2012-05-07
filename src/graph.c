@@ -50,8 +50,9 @@ struct graph_t* build_regular_graph(int num_vertices, int edges_per_vertex)
 {
   struct graph_t* g = build_unconnected_graph(num_vertices);
   for (int i = 0; i < num_vertices; i++) {
-    for (int j = i+1; j <= (i + edges_per_vertex); j++) {
-      set_edge(g, i, j % g->size, true);
+    for (int j = 1; j <= (edges_per_vertex >> 1); j++) {
+      set_edge(g, i, (i + j) % g->size, true);
+      set_edge(g, i, (g->size + i - j) % g->size, true);
     }
   }
   return g;
