@@ -66,9 +66,9 @@ void randomise_graph(struct graph_t *g, float p)
     // Now test all connections
     for (int j = i; j < g->size; j++)
     {
-      // If random number > probability we swap nodes about, 
+      // If random number < probability we swap nodes about,
       // Also, dont disconnect a node from the graph.
-      if (g->mat[i][j] && (float)rand()/(float)RAND_MAX > p && get_degree(g, j) != 1)
+      if (g->mat[i][j] && (float)rand()/(float)RAND_MAX < p && get_degree(g, j) != 1)
       {
         // Disconnect nodes
         g->mat[i][j] = false;
