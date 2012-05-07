@@ -10,24 +10,6 @@ static void print_usage(FILE *f)
   fprintf(f, "  prob_of_swap - a float between 0 and 1\n");
 }
 
-static void print_histogram(FILE *f, unsigned int *histogram, unsigned int max_degree)
-{
-  fprintf(f, "Degree distribution:\n\n");
-  unsigned int max = 0;
-  for (int i = 0; i < max_degree; i++)
-    max = max(max, histogram[i]);
-  const int LINES = 20;
-  for (int i = 0; i < LINES; i++)
-  {
-    for (int j = 0; j <= max_degree; j++)
-      fprintf(f, (double) histogram[j] / max >= (double) (LINES - i) / LINES ? "[ ]" : "   ");
-    fprintf(f, "\n");
-  }
-  for (int i = 0; i <= max_degree; i++)
-    fprintf(f, "%2u ", i);
-  fprintf(f, "\n");
-}
-
 int main(int argc, char** argv)
 {
   int num_vertices, edges_per_vertex;
@@ -60,18 +42,19 @@ int main(int argc, char** argv)
 
   double avg_path = get_average_path_length(g);
   double global_cc = get_global_clustering_coefficient(g);
-  int max_degree;
-  int* histogram = get_degree_distribution(g, &max_degree);
+  struct histogram_t *h = get_degree_distribution(g);
   fprintf(stderr,
       "Statistics:\n"
-      "Average path length:            %f\n"
-      "Global clustering coefficient:  %f\n",
+      "  Average path length:            %f\n"
+      "  Global clustering coefficient:  %f\n"
+      "  Degree distribution:\n\n",
       avg_path, global_cc);
-  print_histogram(stderr, histogram, max_degree);
 
+  print_histogram(stderr, h);
   print_graph(g);
+
   delete_graph(g);
-  free(histogram);
+  delete_histogram(h);
   return 0;
 
 err_usage:

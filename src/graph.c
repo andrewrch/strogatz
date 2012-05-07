@@ -83,9 +83,9 @@ void randomise_graph(struct graph_t *g, float p)
 }
 
 // Calculates the degree of a node
-int get_degree(struct graph_t *g, int node)
+unsigned int get_degree(struct graph_t *g, int node)
 {
-  int d = 0;
+  unsigned int d = 0;
   for (int i = 0; i < g->size; i++)
     d += !!get_edge(g, i, node);
   return d;
@@ -167,7 +167,7 @@ double get_local_clustering_coefficient(struct graph_t *g, int node)
 {
   // Named according to formula in lecture
   int e = get_links_between_neighbours(g, node);
-  int k = get_degree(g, node);
+  unsigned int k = get_degree(g, node);
   return k > 1 ? 2 * (double) e / (k * (k-1)) : 0;
 }
 
@@ -175,21 +175,18 @@ double get_local_clustering_coefficient(struct graph_t *g, int node)
  * Produces the degree distribution for the network.
  * Returns a malloced int pointer so dont forget to free...
  */
-unsigned int* get_degree_distribution(struct graph_t *g, unsigned int* size)
+struct histogram_t* get_degree_distribution(struct graph_t *g)
 {
   // Find max degree in network and set size
-  *size = 0;
+  unsigned int max_degree = 0;
   for (int i = 0; i < g->size; i++)
-    *size = max(*size, get_degree(g, i));
+    max_degree = max(max_degree, get_degree(g, i));
 
-  // Malloc the histogram
-  unsigned int* histogram = (unsigned int*) calloc(*size+1, sizeof(unsigned int));
-
+  struct histogram_t *hist = create_empty_histogram(max_degree + 1);
   // And now build the histogram
-  for (int i = 0; i < g->size; i++)
-    histogram[get_degree(g, i)]++;
-
-  return histogram;
+  for (unsigned int i = 0; i < g->size; i++)
+    increment_bin(hist, get_degree(g, i));
+  return hist;
 }
 
 /**
