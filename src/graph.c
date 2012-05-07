@@ -102,19 +102,16 @@ int get_degree(struct graph_t *g, int node)
 
 /**
  * Converts a number into an ASCII label
+ * Characters represent the index in reverse, but it doesn't really matter
  */
 char* get_graph_label(int n, char *str)
 {
   int pos = 0;
-  while (n >= 26)
-  {
-    int c = (n-26)/26;
-    str[pos] = c + 65;
-    n%=26;
-    pos++;
-  }
-  str[pos] = n+65;
-  str[pos+1] = '\0';
+  do {
+    str[pos++] = 'A' + (n % 26);
+    n /= 26;
+  } while (n);
+  str[pos] = 0;
   return str;
 }
 
@@ -139,7 +136,7 @@ void print_graph(struct graph_t* g)
   {
     x = cos(((M_PI*2)/(double)g->size)*(double)i)*radius;
     y = sin(((M_PI*2)/(double)g->size)*(double)i)*radius;
-    char label[10];
+    char label[50];
     get_graph_label(i, label);
     // Dont know why I chose this colour, looks wicked though
     printf("%s [label=\"\",pos=\"%f,%f!\",shape=circle,width=.3,style=filled,fillcolor=\"#FF1CAE\",fixedsize=true]\n", label, x, y);
@@ -149,7 +146,7 @@ void print_graph(struct graph_t* g)
       if (get_edge(g, i, j))
       {
         // Wont have a label longer than this...
-        char i_lab[10], j_lab[10];
+        char i_lab[50], j_lab[50];
         get_graph_label(i, i_lab);
         get_graph_label(j, j_lab);
         printf("%s -- %s\n", i_lab, j_lab);
