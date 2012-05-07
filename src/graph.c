@@ -2,17 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
-
-#define min(x,y) ({ \
-  typeof (x) __x = (x); \
-  typeof (y) __y = (y); \
-  (__x < __y) ? __x : __y; \
-})
-#define max(x,y) ({ \
-  typeof (x) __x = (x); \
-  typeof (y) __y = (y); \
-  (__x > __y) ? __x : __y; \
-})
+#include <limits.h>
 
 /**
  * Sets whether an edge is present between two vertices i & j
@@ -102,6 +92,107 @@ int get_degree(struct graph_t *g, int node)
 }
 
 /**
+ * Recursive helper method to find min distance from a to b
+ */
+static unsigned int get_distance_impl(struct graph_t *g, int a, int b, bool* visited)
+{
+  visited[a] = true;
+  if (get_edge(g, a, b))
+    return 0;
+  else
+  {
+    unsigned int min = UINT_MAX;
+    for (int i = 0; i < g->size; i++)
+      if (get_edge(g, a, i) && !visited[i])
+        min = min(min, get_distance_impl(g, i, b, visited) + 1);
+    return min;
+  }
+}
+
+/**
+ * Finds distance from node a to node b
+ *
+ * Each arc is of distance 1, so really this a measure
+ * of how many steps it takes to get from a to b
+ */
+int get_distance(struct graph_t *g, int a, int b)
+{
+  // Keeps track of visited nodes to stop cyclic infinite recursion
+  bool visited[g->size];
+  for (int i = 0; i < g->size; i++) visited[i] = false;
+  return get_distance_impl(g, a, b, visited);
+}
+
+/**
+ * Function to calculate average path length in graph according
+ * to equations given in lecture slides.
+ */
+double get_average_path_length(struct graph_t *g)
+{
+  // Calculate total path length
+  unsigned int sum = 0;
+  
+  for (int i = 0; i < g->size; i++)
+    for (int j = i; j < g->size; j++) 
+      sum += get_distance(g, i, j);
+
+  // Now make that an average
+  return (double) sum / (0.5 * (double) g->size * (double) (g->size - 1));
+}
+
+static int get_links_between_neighbours(struct graph_t *g, int node)
+{
+  int sum = 0;
+  for (int i = 0; i < g->size; i++)
+    // If i is a neighbour of node
+    if (get_edge(g, node, i))
+      // Check all possible links
+      for (int j = 0; j < g->size; j++)
+        // If edge is a neighbour of i, and also a neighbour of node
+        if (get_edge(g, i, j) && get_edge(g, node, j))
+          sum++;
+  return sum;
+}
+
+double get_global_clustering_coefficient(struct graph_t *g)
+{
+  double sum = 0;
+  // Average C over all nodes
+  for (int i = 0; i < g->size; i++)
+    sum += get_local_clustering_coefficient(g, i);
+  return sum / g->size;
+}
+
+double get_local_clustering_coefficient(struct graph_t *g, int node)
+{
+  // Named according to formula in lecture
+  int e = get_links_between_neighbours(g, node);
+  int k = get_degree(g, node);
+  return k > 1 ? 2 * (double) e / (k * (k-1)) : 0;
+}
+
+/**
+ * Produces the degree distribution for the network.
+ * Returns a malloced int pointer so dont forget to free...
+ */
+unsigned int* get_degree_distribution(struct graph_t *g, unsigned int* size)
+{
+  // Find max degree in network and set size
+  *size = 0;
+  for (int i = 0; i < g->size; i++)
+    *size = max(*size, get_degree(g, i));
+
+  // Malloc the histogram
+  unsigned int* histogram = (unsigned int*) calloc(*size+1, sizeof(unsigned int));
+
+  // And now build the histogram
+  for (int i = 0; i < g->size; i++)
+    histogram[get_degree(g, i)]++;
+
+  return histogram;
+}
+
+/**
  * Converts a number into an ASCII label
  * Characters represent the index in reverse, but it doesn't really matter
  */
@@ -116,32 +207,38 @@ char* get_graph_label(int n, char *str)
   return str;
 }
 
-/*
+/**
  * Prints a graph in dot format.
- * Please use `circo` to draw the graph in a nice big circle to 
- * make it look pretty.
  */
 void print_graph(struct graph_t* g)
 {
   // Print the graph header
-  printf("graph the_graph {\n");
-  printf("ordering=out\n");
-  printf("layout=\"neato\"\n");
+  printf("graph the_graph {\n"
+      "ordering=out\n"
+      "layout=\"neato\"\n");
 
   // Circo draws graphs in a circle sometimes but fails other times so 
   // we'll calculate node positions manually.
-  double x = 0, y = 0;
-  double radius = g->size/M_PI;
-  // Print all nodes and their connections
+  double x, y, angle, radius = g->size/M_PI;
+  // Print all nodes
   for (int i = 0; i < g->size; i++)
   {
-    x = cos(((M_PI*2)/(double)g->size)*(double)i)*radius;
-    y = sin(((M_PI*2)/(double)g->size)*(double)i)*radius;
+    angle = ((M_PI*2)/(double)g->size)*(double)i;
+    x = cos(angle)*radius;
+    y = sin(angle)*radius;
     char label[50];
     get_graph_label(i, label);
-    // Dont know why I chose this colour, looks wicked though
-    printf("%s [label=\"\",pos=\"%f,%f!\",shape=circle,width=.3,style=filled,fillcolor=\"#FF1CAE\",fixedsize=true]\n", label, x, y);
+    // Pink nodes for dan
+    printf("%s [label=\"%d\","
+        "pos=\"%f,%f!\","
+        "shape=circle,"
+        "width=1.,"
+        "fixedsize=true," 
+        "style=filled,"
+        "fillcolor=\"#FF1CAE\"\n]",
+        label, i, x, y);
   }
+  // Print all arcs
   for (int i = 0; i < g->size; i++)
     for (int j = i; j < g->size; j++)
       if (get_edge(g, i, j))
@@ -155,16 +252,6 @@ void print_graph(struct graph_t* g)
 
   // Finish that mother off
   printf("}\n");
-}
-
-void print_matrix(struct graph_t* g)
-{
-  for (int i =0; i < g->size; i++)
-  {
-    for (int j = 0; j < g->size; j++)
-      printf("%c ", get_edge(g, i, j) ? 't' : 'f');
-    printf("\n");
-  }
 }
 
 void delete_graph(struct graph_t* g)
