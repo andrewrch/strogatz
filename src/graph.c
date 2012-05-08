@@ -192,21 +192,48 @@ unsigned int get_distance(struct graph_t *g, int a, int b)
   return dist;
 }
 
+void floyd_warshall(struct graph_t *g, unsigned int dist[g->size][g->size])
+{
+//  dist = (unsigned int*) calloc(0, g->size * sizeof(unsigned int));
+  for (int i = 0; i < g->size; i++)
+    for (int j = i + 1; j < g->size; j++)
+      dist[i][j] = !!get_edge(g, i, j);
+
+  int i, j, k;
+  for (k = 0; k < g->size; ++k) {
+    for (i = 0; i < g->size; ++i)
+      for (j = i+1; j < g->size; ++j)
+        /* If i and j are different nodes and if
+           the paths between i and k and between
+           k and j exist, do */
+        if ((dist[i][k] * dist[k][j] != 0) && (i != j))
+        /* See if you can't get a shorter path
+           between i and j by interspacing
+           k somewhere along the current
+           path */
+          if ((dist[i][k] + dist[k][j] < dist[i][j]) ||
+              (dist[i][j] == 0))
+              dist[i][j] = dist[i][k] + dist[k][j];
+    }
+}
+
 /**
  * Function to calculate average path length in graph according
  * to equations given in lecture slides.
  */
 double get_average_path_length(struct graph_t *g)
 {
+  unsigned int dist[g->size][g->size];
+  floyd_warshall(g, dist);
   // Calculate total path length
   unsigned int sum = 0;
   
   for (int i = 0; i < g->size; i++)
     for (int j = i + 1; j < g->size; j++) 
     {
-      unsigned int d = get_distance(g, i, j); 
-      fprintf(stderr, "Distance from %d to %d is %u\n", i, j, d);
-      sum += d;
+//      unsigned int d = get_distance(g, i, j); 
+//      fprintf(stderr, "Distance from %d to %d is %u\n", i, j, d);
+      sum += dist[i][j];
 //      sum += get_distance(g, i, j);
     }
 
