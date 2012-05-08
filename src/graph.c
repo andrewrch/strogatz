@@ -5,6 +5,41 @@
 #include <limits.h>
 #include <string.h>
 
+typedef struct queue_node_s {
+  int i, dist;
+  struct queue_node_s *next;
+} queue_node_t;
+
+static void queue_append(queue_node_t **q, queue_node_t *n)
+{
+  if (!*q) {
+    *q = n;
+    return;
+  }
+
+  queue_node_t *l = *q;
+  while (l->next)
+    l = l->next;
+
+  l->next = n;
+}
+
+static void queue_append_index(queue_node_t **q, int i, int dist)
+{
+  queue_node_t *n = malloc(sizeof(queue_node_t));
+  n->i = i;
+  n->dist = dist;
+  n->next = NULL;
+  queue_append(q, n);
+}
+
+static queue_node_t *queue_pop(queue_node_t **q)
+{
+  queue_node_t *top = *q;
+  *q = top->next;
+  return top;
+}
+
 /**
  * Sets whether an edge is present between two vertices i & j
  * Assumes the graph is undirected
@@ -116,47 +151,6 @@ static void indent(int d)
 #endif
 
 /**
- * Recursive helper method to find min distance from a to b
- */
-static unsigned int get_distance_impl(struct graph_t *g, int a, int b, bool* visited, size_t sz, int depth)
-{
-  if (get_edge(g, a, b))
-    return 1;
-
-//  unsigned int d = get_dist_mat(g, a, b);
-//  fprintf(stderr, "dist from %d to %d: %u\n", a, b, d);
-//  if (d)
-//    return d;
-
-  unsigned int min = UINT_MAX - 1;
-  visited[a] = true;
-  for (int i = 0; i < g->size; i++)
-  {
-//    fprintf(stderr, "min = %f, %s, %s
-    if (get_edge(g, a, i) && !visited[i])
-    {
-      if (get_edge(g, i, b))
-        return 2;
-      bool nvisited[g->size];
-      memcpy(nvisited, visited, sz);
-      nvisited[i] = true;
-      min = min(min, get_distance_impl(g, i, b, nvisited, sz, depth + 1) + 1);
-      if (min <= depth + 2)
-        break;
-    }
-  }
-#if 0
-  fprintf(stderr, "%d ", depth);
-  indent(depth);
-  fprintf(stderr, "min=%u\n", min);
-#endif
-//  fprintf(stderr, "dist from %d to %d: %u\n", a, b, min);
-//  if (min < get_dist_mat(g, a, b))
-//    set_dist_mat(g, a, b, min);
-  return min;
-}
-
-/**
  * Finds distance from node a to node b
  *
  * Each arc is of distance 1, so really this a measure
@@ -164,10 +158,38 @@ static unsigned int get_distance_impl(struct graph_t *g, int a, int b, bool* vis
  */
 unsigned int get_distance(struct graph_t *g, int a, int b)
 {
-  // Keeps track of visited nodes to stop cyclic infinite recursion
-  bool visited[g->size];
-  memset(visited, 0, sizeof(visited));
-  return get_distance_impl(g, a, b, visited, sizeof(visited), 0);
+  queue_node_t *q = NULL, *n = NULL;
+  int dist = 0;
+  bool edge;
+
+  if (get_edge(g, a, b))
+    return 1;
+
+  for (int i = 0; i < g->size; i++) {
+    if (get_edge(g, a, i))
+      queue_append_index(&q, i, 2);
+  }
+
+  while (q) {
+    n = queue_pop(&q);
+    dist = n->dist;
+    edge = get_edge(g, n->i, b);
+    if (!edge) {
+      for (int i = 0; i < g->size; i++) {
+        if (get_edge(g, n->i, i))//(i != n->i && i != a)
+          queue_append_index(&q, i, n->dist + 1);
+      }
+    }
+    free(n);
+    if (edge)
+      break;
+  }
+
+  while (q) {
+    free(queue_pop(&q));
+  }
+
+  return dist;
 }
 
 /**
