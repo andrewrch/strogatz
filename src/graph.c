@@ -59,7 +59,9 @@ static bool get_edge(struct graph_t *g, int i, int j)
   return g->mat[(min(i,j)*g->size)+max(i,j)];
 }
 
-#if 0
+/**
+ * These are needed for the Floyd Warshall algorithm now
+ */
 static void set_dist_mat(struct graph_t *g, int i, int j, unsigned int d)
 {
   g->dist_mat[(min(i,j)*g->size)+max(i,j)] = d;
@@ -69,7 +71,6 @@ static unsigned int get_dist_mat(struct graph_t *g, int i, int j)
 {
   return g->dist_mat[(min(i,j)*g->size)+max(i,j)];
 }
-#endif
 
 /**
  * Initialises an empty graph with no connections
@@ -142,79 +143,28 @@ unsigned int get_degree(struct graph_t *g, int node)
   return d;
 }
 
-#if 0
-static void indent(int d)
+void floyd_warshall(struct graph_t *g)
 {
-  for (int i = 0; i < d; i++)
-    fprintf(stderr, "  ");
-}
-#endif
-
-/**
- * Finds distance from node a to node b
- *
- * Each arc is of distance 1, so really this a measure
- * of how many steps it takes to get from a to b
- */
-unsigned int get_distance(struct graph_t *g, int a, int b)
-{
-  queue_node_t *q = NULL, *n = NULL;
-  int dist = 0;
-  bool edge;
-
-  if (get_edge(g, a, b))
-    return 1;
-
-  for (int i = 0; i < g->size; i++) {
-    if (get_edge(g, a, i))
-      queue_append_index(&q, i, 2);
-  }
-
-  while (q) {
-    n = queue_pop(&q);
-    dist = n->dist;
-    edge = get_edge(g, n->i, b);
-    if (!edge) {
-      for (int i = 0; i < g->size; i++) {
-        if (get_edge(g, n->i, i))//(i != n->i && i != a)
-          queue_append_index(&q, i, n->dist + 1);
-      }
-    }
-    free(n);
-    if (edge)
-      break;
-  }
-
-  while (q) {
-    free(queue_pop(&q));
-  }
-
-  return dist;
-}
-
-void floyd_warshall(struct graph_t *g, unsigned int dist[g->size][g->size])
-{
-//  dist = (unsigned int*) calloc(0, g->size * sizeof(unsigned int));
+  // Initialise the distance matrix
   for (int i = 0; i < g->size; i++)
     for (int j = i + 1; j < g->size; j++)
-      dist[i][j] = !!get_edge(g, i, j);
-
-  int i, j, k;
-  for (k = 0; k < g->size; ++k) {
-    for (i = 0; i < g->size; ++i)
-      for (j = i+1; j < g->size; ++j)
-        /* If i and j are different nodes and if
-           the paths between i and k and between
-           k and j exist, do */
-        if ((dist[i][k] * dist[k][j] != 0) && (i != j))
-        /* See if you can't get a shorter path
-           between i and j by interspacing
-           k somewhere along the current
-           path */
-          if ((dist[i][k] + dist[k][j] < dist[i][j]) ||
-              (dist[i][j] == 0))
-              dist[i][j] = dist[i][k] + dist[k][j];
+    {
+      set_dist_mat(g, i, j, !!get_edge(g, i, j));
     }
+
+  for (int k = 0; k < g->size; k++)
+    for (int i = 0; i < g->size; i++)
+      for (int j = i + 1; j < g->size; j++)
+      {
+        if (i != j && get_dist_mat(g, i, k) && get_dist_mat(g, k, j))
+        {
+          unsigned int new_dist = get_dist_mat(g, i, k) + get_dist_mat(g, k, j);
+          if (new_dist < get_dist_mat(g, i, j) || get_dist_mat(g, i, j) == 0)
+          {
+            set_dist_mat(g, i, j, new_dist); 
+          }
+        }
+      }
 }
 
 /**
@@ -223,19 +173,12 @@ void floyd_warshall(struct graph_t *g, unsigned int dist[g->size][g->size])
  */
 double get_average_path_length(struct graph_t *g)
 {
-  unsigned int dist[g->size][g->size];
-  floyd_warshall(g, dist);
+  floyd_warshall(g);
   // Calculate total path length
   unsigned int sum = 0;
-  
   for (int i = 0; i < g->size; i++)
     for (int j = i + 1; j < g->size; j++) 
-    {
-//      unsigned int d = get_distance(g, i, j); 
-//      fprintf(stderr, "Distance from %d to %d is %u\n", i, j, d);
-      sum += dist[i][j];
-//      sum += get_distance(g, i, j);
-    }
+      sum += get_dist_mat(g, i, j);
 
   // Now make that an average
   return 2.0 * (double) sum / (g->size * (g->size - 1));
