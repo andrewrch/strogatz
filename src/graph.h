@@ -7,7 +7,9 @@
 
 struct graph_t {
   bool *mat;
+  unsigned int *dist_mat;
   int size;
+  int edges_per_vertex;
 };
 
 struct graph_t* build_unconnected_graph(int num_vertices);
@@ -18,7 +20,7 @@ double get_local_clustering_coefficient(struct graph_t*, int);
 double get_global_clustering_coefficient(struct graph_t*);
 void randomise_graph(struct graph_t*, float);
 unsigned int get_degree(struct graph_t*, int);
-int get_distance(struct graph_t*, int, int);
+unsigned int get_distance(struct graph_t*, int, int);
 void print_graph(struct graph_t*);
 void delete_graph(struct graph_t*);
 

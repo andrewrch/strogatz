@@ -3,6 +3,7 @@
 #include <time.h>
 #include <math.h>
 #include <limits.h>
+#include <string.h>
 
 /**
  * Sets whether an edge is present between two vertices i & j
@@ -11,6 +12,7 @@
 static void set_edge(struct graph_t *g, int i, int j, bool connected)
 {
   g->mat[(min(i,j)*g->size)+max(i,j)] = connected;
+  memset(g->dist_mat, 0, g->size * g->size * sizeof(int));
 }
 
 /**
@@ -22,6 +24,18 @@ static bool get_edge(struct graph_t *g, int i, int j)
   return g->mat[(min(i,j)*g->size)+max(i,j)];
 }
 
+#if 0
+static void set_dist_mat(struct graph_t *g, int i, int j, unsigned int d)
+{
+  g->dist_mat[(min(i,j)*g->size)+max(i,j)] = d;
+}
+
+static unsigned int get_dist_mat(struct graph_t *g, int i, int j)
+{
+  return g->dist_mat[(min(i,j)*g->size)+max(i,j)];
+}
+#endif
+
 /**
  * Initialises an empty graph with no connections
  */
@@ -29,6 +43,8 @@ struct graph_t* build_unconnected_graph(int num_vertices)
 {
   struct graph_t *g = (struct graph_t*) malloc(sizeof(struct graph_t));
   g->mat = (bool*) calloc(num_vertices * num_vertices, sizeof(bool));
+  g->dist_mat = (unsigned int*) calloc(num_vertices * num_vertices, sizeof(int));
+  //fprintf(stderr, "mat=%p dist_mat=%p\n", g->mat, g->dist_mat);
   g->size = num_vertices;
   return g;
 }
@@ -45,6 +61,7 @@ struct graph_t* build_regular_graph(int num_vertices, int edges_per_vertex)
       set_edge(g, i, (g->size + i - j) % g->size, true);
     }
   }
+  g->edges_per_vertex = edges_per_vertex;
   return g;
 }
 
@@ -58,14 +75,13 @@ void randomise_graph(struct graph_t *g, float p)
   // SEEEEEEEEEEDD
   srand((unsigned)time(0));
 
-  // Iterate over each node
-  for (int i = 0; i < g->size; i++)
-    // Now test all connections
-    for (int j = i; j < g->size; j++)
+  for (int k = 1; k <= (g->edges_per_vertex >> 1); k++)
+    for (int i = 0; i < g->size; i++)
     {
+      int j = (i + k) % g->size;
       // If random number < probability we swap nodes about, 
       // Also, dont disconnect a node from the graph.
-      if (get_edge(g, i, j) && (float)rand()/(float)RAND_MAX < p && get_degree(g, j) != 1)
+      if (get_edge(g, i, j) && (float)rand()/(float)RAND_MAX < p && get_degree(g, j) != 1 && get_degree(g, i) != g->size-1)
       {
         // Disconnect nodes
         set_edge(g, i, j, false);
@@ -76,8 +92,8 @@ void randomise_graph(struct graph_t *g, float p)
         }
         // Want to make sure we create a new connection, and it isn't
         // a self loop
-        while (new == j || new == i);
-        set_edge(g, i, new, true);
+        while (new == j || new == i || get_edge(g, i, new));
+          set_edge(g, i, new, true);
       }
     }
 }
@@ -91,22 +107,53 @@ unsigned int get_degree(struct graph_t *g, int node)
   return d;
 }
 
+#if 0
+static void indent(int d)
+{
+  for (int i = 0; i < d; i++)
+    fprintf(stderr, "  ");
+}
+#endif
+
 /**
  * Recursive helper method to find min distance from a to b
  */
-static unsigned int get_distance_impl(struct graph_t *g, int a, int b, bool* visited)
+static unsigned int get_distance_impl(struct graph_t *g, int a, int b, bool* visited, size_t sz, int depth)
 {
-  visited[a] = true;
   if (get_edge(g, a, b))
-    return 0;
-  else
+    return 1;
+
+//  unsigned int d = get_dist_mat(g, a, b);
+//  fprintf(stderr, "dist from %d to %d: %u\n", a, b, d);
+//  if (d)
+//    return d;
+
+  unsigned int min = UINT_MAX - 1;
+  visited[a] = true;
+  for (int i = 0; i < g->size; i++)
   {
-    unsigned int min = UINT_MAX;
-    for (int i = 0; i < g->size; i++)
-      if (get_edge(g, a, i) && !visited[i])
-        min = min(min, get_distance_impl(g, i, b, visited) + 1);
-    return min;
+//    fprintf(stderr, "min = %f, %s, %s
+    if (get_edge(g, a, i) && !visited[i])
+    {
+      if (get_edge(g, i, b))
+        return 2;
+      bool nvisited[g->size];
+      memcpy(nvisited, visited, sz);
+      nvisited[i] = true;
+      min = min(min, get_distance_impl(g, i, b, nvisited, sz, depth + 1) + 1);
+      if (min <= depth + 2)
+        break;
+    }
   }
+#if 0
+  fprintf(stderr, "%d ", depth);
+  indent(depth);
+  fprintf(stderr, "min=%u\n", min);
+#endif
+//  fprintf(stderr, "dist from %d to %d: %u\n", a, b, min);
+//  if (min < get_dist_mat(g, a, b))
+//    set_dist_mat(g, a, b, min);
+  return min;
 }
 
 /**
@@ -115,12 +162,12 @@ static unsigned int get_distance_impl(struct graph_t *g, int a, int b, bool* vis
  * Each arc is of distance 1, so really this a measure
  * of how many steps it takes to get from a to b
  */
-int get_distance(struct graph_t *g, int a, int b)
+unsigned int get_distance(struct graph_t *g, int a, int b)
 {
   // Keeps track of visited nodes to stop cyclic infinite recursion
   bool visited[g->size];
-  for (int i = 0; i < g->size; i++) visited[i] = false;
-  return get_distance_impl(g, a, b, visited);
+  memset(visited, 0, sizeof(visited));
+  return get_distance_impl(g, a, b, visited, sizeof(visited), 0);
 }
 
 /**
@@ -133,21 +180,26 @@ double get_average_path_length(struct graph_t *g)
   unsigned int sum = 0;
   
   for (int i = 0; i < g->size; i++)
-    for (int j = i; j < g->size; j++) 
-      sum += get_distance(g, i, j);
+    for (int j = i + 1; j < g->size; j++) 
+    {
+      unsigned int d = get_distance(g, i, j); 
+      fprintf(stderr, "Distance from %d to %d is %u\n", i, j, d);
+      sum += d;
+//      sum += get_distance(g, i, j);
+    }
 
   // Now make that an average
-  return (double) sum / (0.5 * (double) g->size * (double) (g->size - 1));
+  return 2.0 * (double) sum / (g->size * (g->size - 1));
 }
 
-static int get_links_between_neighbours(struct graph_t *g, int node)
+int get_links_between_neighbours(struct graph_t *g, int node)
 {
   int sum = 0;
   for (int i = 0; i < g->size; i++)
     // If i is a neighbour of node
     if (get_edge(g, node, i))
       // Check all possible links
-      for (int j = 0; j < g->size; j++)
+      for (int j = i + 1; j < g->size; j++)
         // If edge is a neighbour of i, and also a neighbour of node
         if (get_edge(g, i, j) && get_edge(g, node, j))
           sum++;
@@ -173,7 +225,7 @@ double get_local_clustering_coefficient(struct graph_t *g, int node)
 
 /**
  * Produces the degree distribution for the network.
- * Returns a malloced int pointer so dont forget to free...
+ * Returns a malloced pointer so dont forget to free.
  */
 struct histogram_t* get_degree_distribution(struct graph_t *g)
 {
@@ -232,7 +284,7 @@ void print_graph(struct graph_t* g)
         "width=1.,"
         "fixedsize=true," 
         "style=filled,"
-        "fillcolor=\"#FF1CAE\"\n]",
+        "fillcolor=\"#FF1CAE\"\n]\n",
         label, i, x, y);
   }
   // Print all arcs
