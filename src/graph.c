@@ -24,18 +24,6 @@ static bool get_edge(struct graph_t *g, int i, int j)
   return g->mat[(min(i,j)*g->size)+max(i,j)];
 }
 
-#if 0
-static void set_dist_mat(struct graph_t *g, int i, int j, unsigned int d)
-{
-  g->dist_mat[(min(i,j)*g->size)+max(i,j)] = d;
-}
-
-static unsigned int get_dist_mat(struct graph_t *g, int i, int j)
-{
-  return g->dist_mat[(min(i,j)*g->size)+max(i,j)];
-}
-#endif
-
 /**
  * Initialises an empty graph with no connections
  */
@@ -107,14 +95,6 @@ unsigned int get_degree(struct graph_t *g, int node)
   return d;
 }
 
-#if 0
-static void indent(int d)
-{
-  for (int i = 0; i < d; i++)
-    fprintf(stderr, "  ");
-}
-#endif
-
 /**
  * Recursive helper method to find min distance from a to b
  */
@@ -123,16 +103,10 @@ static unsigned int get_distance_impl(struct graph_t *g, int a, int b, bool* vis
   if (get_edge(g, a, b))
     return 1;
 
-//  unsigned int d = get_dist_mat(g, a, b);
-//  fprintf(stderr, "dist from %d to %d: %u\n", a, b, d);
-//  if (d)
-//    return d;
-
   unsigned int min = UINT_MAX - 1;
   visited[a] = true;
   for (int i = 0; i < g->size; i++)
   {
-//    fprintf(stderr, "min = %f, %s, %s
     if (get_edge(g, a, i) && !visited[i])
     {
       if (get_edge(g, i, b))
@@ -145,14 +119,6 @@ static unsigned int get_distance_impl(struct graph_t *g, int a, int b, bool* vis
         break;
     }
   }
-#if 0
-  fprintf(stderr, "%d ", depth);
-  indent(depth);
-  fprintf(stderr, "min=%u\n", min);
-#endif
-//  fprintf(stderr, "dist from %d to %d: %u\n", a, b, min);
-//  if (min < get_dist_mat(g, a, b))
-//    set_dist_mat(g, a, b, min);
   return min;
 }
 
@@ -181,12 +147,7 @@ double get_average_path_length(struct graph_t *g)
   
   for (int i = 0; i < g->size; i++)
     for (int j = i + 1; j < g->size; j++) 
-    {
-      unsigned int d = get_distance(g, i, j); 
-      fprintf(stderr, "Distance from %d to %d is %u\n", i, j, d);
-      sum += d;
-//      sum += get_distance(g, i, j);
-    }
+      sum += get_distance(g, i, j);
 
   // Now make that an average
   return 2.0 * (double) sum / (g->size * (g->size - 1));
