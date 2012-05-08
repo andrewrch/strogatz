@@ -5,41 +5,6 @@
 #include <limits.h>
 #include <string.h>
 
-typedef struct queue_node_s {
-  int i, dist;
-  struct queue_node_s *next;
-} queue_node_t;
-
-static void queue_append(queue_node_t **q, queue_node_t *n)
-{
-  if (!*q) {
-    *q = n;
-    return;
-  }
-
-  queue_node_t *l = *q;
-  while (l->next)
-    l = l->next;
-
-  l->next = n;
-}
-
-static void queue_append_index(queue_node_t **q, int i, int dist)
-{
-  queue_node_t *n = malloc(sizeof(queue_node_t));
-  n->i = i;
-  n->dist = dist;
-  n->next = NULL;
-  queue_append(q, n);
-}
-
-static queue_node_t *queue_pop(queue_node_t **q)
-{
-  queue_node_t *top = *q;
-  *q = top->next;
-  return top;
-}
-
 /**
  * Sets whether an edge is present between two vertices i & j
  * Assumes the graph is undirected
