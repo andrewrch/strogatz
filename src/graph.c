@@ -4,6 +4,7 @@
 #include <math.h>
 #include <limits.h>
 #include <string.h>
+#include <assert.h>
 
 /**
  * Sets whether an edge is present between two vertices i & j
@@ -43,8 +44,12 @@ static unsigned int get_dist_mat(struct graph_t *g, int i, int j)
 struct graph_t* build_unconnected_graph(int num_vertices)
 {
   struct graph_t *g = (struct graph_t*) malloc(sizeof(struct graph_t));
-  g->mat = (bool*) calloc(num_vertices * num_vertices, sizeof(bool));
-  g->dist_mat = (unsigned int*) calloc(num_vertices * num_vertices, sizeof(int));
+  size_t count = (size_t)num_vertices * (size_t)num_vertices;
+  //fprintf(stderr, "allocating %llu\n", (long long unsigned)count);
+  g->mat = (bool*) calloc(count, sizeof(bool));
+  assert(g->mat);
+  g->dist_mat = (unsigned int*) calloc(count, sizeof(int));
+  assert(g->dist_mat);
   //fprintf(stderr, "mat=%p dist_mat=%p\n", g->mat, g->dist_mat);
   g->size = num_vertices;
   return g;
