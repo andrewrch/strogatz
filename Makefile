@@ -1,4 +1,4 @@
-CFLAGS := -Wall -Werror -std=gnu99 -fopenmp -ftree-parallelize-loops=4 -g -O0 -lm
+CFLAGS := -Wall -Werror -std=gnu99 -fopenmp -ftree-parallelize-loops=4 -g -O2 -lm
 
 all: strogatz watts print_histogram
 
