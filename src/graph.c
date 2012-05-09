@@ -4,6 +4,7 @@
 #include <math.h>
 #include <limits.h>
 #include <string.h>
+#include <assert.h>
 
 /**
  * Sets whether an edge is present between two vertices i & j
@@ -43,8 +44,12 @@ static unsigned int get_dist_mat(struct graph_t *g, int i, int j)
 struct graph_t* build_unconnected_graph(int num_vertices)
 {
   struct graph_t *g = (struct graph_t*) malloc(sizeof(struct graph_t));
-  g->mat = (bool*) calloc(num_vertices * num_vertices, sizeof(bool));
-  g->dist_mat = (unsigned int*) calloc(num_vertices * num_vertices, sizeof(int));
+  size_t count = (size_t)num_vertices * (size_t)num_vertices;
+  //fprintf(stderr, "allocating %llu\n", (long long unsigned)count);
+  g->mat = (bool*) calloc(count, sizeof(bool));
+  assert(g->mat);
+  g->dist_mat = (unsigned int*) calloc(count, sizeof(int));
+  assert(g->dist_mat);
   //fprintf(stderr, "mat=%p dist_mat=%p\n", g->mat, g->dist_mat);
   g->size = num_vertices;
   return g;
@@ -56,12 +61,16 @@ struct graph_t* build_unconnected_graph(int num_vertices)
 struct graph_t* build_regular_graph(int num_vertices, int edges_per_vertex)
 {
   struct graph_t* g = build_unconnected_graph(num_vertices);
-  for (int i = 0; i < num_vertices; i++) {
-    for (int j = 1; j <= (edges_per_vertex >> 1); j++) {
+  int i, j;
+
+  #pragma omp parallel for private(i, j)
+  for (i = 0; i < num_vertices; i++) {
+    for (j = 1; j <= (edges_per_vertex >> 1); j++) {
       set_edge(g, i, (i + j) % g->size, true);
       set_edge(g, i, (g->size + i - j) % g->size, true);
     }
   }
+
   g->edges_per_vertex = edges_per_vertex;
   return g;
 }
@@ -73,13 +82,15 @@ struct graph_t* build_regular_graph(int num_vertices, int edges_per_vertex)
  */
 void randomise_graph(struct graph_t *g, float p)
 {
+  int i, j, k, new;
+
   // SEEEEEEEEEEDD
   srand((unsigned)time(0));
 
-  for (int k = 1; k <= (g->edges_per_vertex >> 1); k++)
-    for (int i = 0; i < g->size; i++)
+  for (k = 1; k <= (g->edges_per_vertex >> 1); k++)
+    for (i = 0; i < g->size; i++)
     {
-      int j = (i + k) % g->size;
+      j = (i + k) % g->size;
       // If random number < probability we swap nodes about, 
       // Also, dont disconnect a node from the graph.
       if (get_edge(g, i, j) && (float)rand()/(float)RAND_MAX < p && get_degree(g, j) != 1 && get_degree(g, i) != g->size-1)
@@ -87,7 +98,6 @@ void randomise_graph(struct graph_t *g, float p)
         // Disconnect nodes
         set_edge(g, i, j, false);
         // Pick a new node
-        int new;
         do {
           new = (float)rand()/(float)RAND_MAX * g->size;
         }
@@ -110,20 +120,23 @@ unsigned int get_degree(struct graph_t *g, int node)
 
 void floyd_warshall(struct graph_t *g)
 {
-  // Initialise the distance matrix
-  for (int i = 0; i < g->size; i++)
-    for (int j = i + 1; j < g->size; j++)
-    {
-      set_dist_mat(g, i, j, !!get_edge(g, i, j));
-    }
+  int i, j, k;
+  unsigned int new_dist;
 
-  for (int k = 0; k < g->size; k++)
-    for (int i = 0; i < g->size; i++)
-      for (int j = i + 1; j < g->size; j++)
+  // Initialise the distance matrix
+  #pragma omp parallel for private(i, j)
+  for (i = 0; i < g->size; i++)
+    for (j = i + 1; j < g->size; j++)
+      set_dist_mat(g, i, j, !!get_edge(g, i, j));
+
+  #pragma omp parallel for private(i, j, k, new_dist)
+  for (k = 0; k < g->size; k++)
+    for (i = 0; i < g->size; i++)
+      for (j = i + 1; j < g->size; j++)
       {
         if (i != j && get_dist_mat(g, i, k) && get_dist_mat(g, k, j))
         {
-          unsigned int new_dist = get_dist_mat(g, i, k) + get_dist_mat(g, k, j);
+          new_dist = get_dist_mat(g, i, k) + get_dist_mat(g, k, j);
           if (new_dist < get_dist_mat(g, i, j) || get_dist_mat(g, i, j) == 0)
           {
             set_dist_mat(g, i, j, new_dist); 
