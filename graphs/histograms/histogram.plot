@@ -12,5 +12,5 @@ set xlabel "Degree of node";
 binwidth=1;
 bin(x,width)=width*floor(x/width);
 set style fill solid border -1;
-set term postscript color;
+set term postscript color "Helvetica" 18 linewidth 2.0;
 
