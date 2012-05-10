@@ -43,7 +43,7 @@ int main(int argc, char** argv)
   for (int i = 0; i < h->bins; i++)
     fprintf(stdout, "%d %d\n", i, h->data[i]);
 
-  //print_histogram(stderr, h);
+  print_histogram(stderr, h);
   delete_histogram(h);
   delete_graph(g);
   return 0;

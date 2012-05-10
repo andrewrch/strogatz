@@ -21,7 +21,7 @@ double get_global_clustering_coefficient(struct graph_t*);
 void randomise_graph(struct graph_t*, float);
 unsigned int get_degree(struct graph_t*, int);
 unsigned int get_distance(struct graph_t*, int, int);
-void print_graph(struct graph_t*);
+void print_graph(FILE*, struct graph_t*);
 void delete_graph(struct graph_t*);
 
 #endif

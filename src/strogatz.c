@@ -51,7 +51,7 @@ int main(int argc, char** argv)
       avg_path, global_cc);
 
   print_histogram(stderr, h);
-  print_graph(g);
+  print_graph(stdout, g);
 
   delete_graph(g);
   delete_histogram(h);

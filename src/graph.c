@@ -45,12 +45,10 @@ struct graph_t* build_unconnected_graph(int num_vertices)
 {
   struct graph_t *g = (struct graph_t*) malloc(sizeof(struct graph_t));
   size_t count = (size_t)num_vertices * (size_t)num_vertices;
-  //fprintf(stderr, "allocating %llu\n", (long long unsigned)count);
   g->mat = (bool*) calloc(count, sizeof(bool));
   assert(g->mat);
   g->dist_mat = (unsigned int*) calloc(count, sizeof(int));
   assert(g->dist_mat);
-  //fprintf(stderr, "mat=%p dist_mat=%p\n", g->mat, g->dist_mat);
   g->size = num_vertices;
   return g;
 }
@@ -84,7 +82,7 @@ void randomise_graph(struct graph_t *g, float p)
 {
   int i, j, k, new;
 
-  // SEEEEEEEEEEDD
+  // Seed random
   srand((unsigned)time(0));
 
   for (k = 1; k <= (g->edges_per_vertex >> 1); k++)
@@ -229,10 +227,10 @@ char* get_graph_label(int n, char *str)
 /**
  * Prints a graph in dot format.
  */
-void print_graph(struct graph_t* g)
+void print_graph(FILE* f, struct graph_t* g)
 {
   // Print the graph header
-  printf("graph the_graph {\n"
+  fprintf(f, "graph the_graph {\n"
       "ordering=out\n"
       "layout=\"neato\"\n");
 
@@ -248,7 +246,7 @@ void print_graph(struct graph_t* g)
     char label[50];
     get_graph_label(i, label);
     // Pink nodes for dan
-    printf("%s [label=\"%d\","
+    fprintf(f, "%s [label=\"%d\","
         "pos=\"%f,%f!\","
         "shape=circle,"
         "width=1.,"
@@ -266,11 +264,11 @@ void print_graph(struct graph_t* g)
         char i_lab[50], j_lab[50];
         get_graph_label(i, i_lab);
         get_graph_label(j, j_lab);
-        printf("%s -- %s\n", i_lab, j_lab);
+        fprintf(f, "%s -- %s\n", i_lab, j_lab);
       }
 
-  // Finish that mother off
-  printf("}\n");
+  // Finish off the graph
+  fprintf(f, "}\n");
 }
 
 void delete_graph(struct graph_t* g)
